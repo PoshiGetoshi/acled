@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACLED Codebook Search</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Caslon+Text&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Playfair Display', serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(230, 230, 250, 0.3), rgba(255, 192, 203, 0.3), rgba(127, 255, 212, 0.3));
+            color: #333;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        
+        em {
+            font-style: italic;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.2rem;
+            font-family: 'Playfair Display', serif;
+            color: #333;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+        }
+        
+        .search-cursor {
+            position: absolute;
+            top: 50%;
+            left: 1.5rem;
+            height: 1.5rem;
+            width: 2px;
+            background-color: #333;
+            transform: translateY(-50%);
+            animation: blink 1s infinite;
+            display: none;
+        }
+        
+        .search-input:placeholder-shown + .search-cursor {
+            display: block;
+        }
+        
+        .search-input::placeholder {
+            color: transparent;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .results {
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: left;
+            display: none;
+            padding: 0.5rem;
+        }
+        
+        .result-item {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-item:hover {
+            background: rgba(255, 255, 255, 0.95);
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .result-description {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #555;
+        }
+        
+        .highlight {
+            background-color: transparent;
+            color: inherit;
+            text-shadow: 
+                0 0 2px #00ffff,
+                0 0 5px #00ffff,
+                0 0 10px #00ffff,
+                0 0 15px #0066ff,
+                0 0 25px #0066ff;
+            padding: 0 2px;
+            font-weight: bold;
+            position: relative;
+            z-index: 1;
+            animation: neon-pulse 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes neon-pulse {
+            from {
+                text-shadow: 
+                    0 0 2px #00ffff,
+                    0 0 5px #00ffff,
+                    0 0 10px #00ffff,
+                    0 0 15px #0066ff;
+            }
+            to {
+                text-shadow: 
+                    0 0 2px #00ffff,
+                    0 0 8px #00ffff,
+                    0 0 12px #00ffff,
+                    0 0 20px #0066ff,
+                    0 0 30px #0066ff,
+                    0 0 40px #0066ff;
+            }
+        }
+        
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: rgba(0, 0, 0, 0.6);
+        }
+        
+        .z-axis-brand {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            text-align: right;
+            line-height: 1;
+            width: auto;
+        }
+        
+        .z-axis-brand .main {
+            font-family: 'Libre Caslon Text', 'Cochin', serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.5px;
+            color: rgba(0, 0, 0, 0.7);
+            font-weight: 500;
+            display: block;
+            width: 100%;
+            text-align: right;
+        }
+        
+        .z-axis-brand .tagline {
+            font-family: 'Libre Caslon Text', 'Cochin', serif;
+            font-size: 0.8rem;
+            color: rgba(0, 0, 0, 0.6);
+            letter-spacing: 0.4px;
+            display: block;
+            width: 100%;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ACLED <em>Codebook</em> Search</h1>
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search for codebook variables..." autocomplete="off">
+            <div class="search-cursor"></div>
+        </div>
+        <div class="results" id="searchResults"></div>
+        <div class="footer">
+            Armed Conflict Location & Event Data Project
+        </div>
+    </div>
+    
+    <div class="z-axis-brand">
+        <div class="main">Z.axis</div>
+        <div class="tagline">escaping flatlands</div>
+    </div>
+
+    <script>
+        // ACLED Codebook variables and definitions
+        const codebookData = [
+            {
+                name: "event_id_cnty",
+                description: "A unique alphanumeric event identifier by number and country acronym. This identifier remains constant even when the event details are updated. Example: ETH9766"
+            },
+            {
+                name: "event_date",
+                description: "The date on which the event took place. Recorded as Year-Month-Day. Example: 2023-02-16"
+            },
+            {
+                name: "year",
+                description: "The year in which the event took place. Example: 2018"
+            },
+            {
+                name: "time_precision",
+                description: "A numeric code between 1 and 3 indicating the level of precision of the date recorded for the event. The higher the number, the lower the precision. Values: 1, 2, or 3; with 1 being the most precise."
+            },
+            {
+                name: "disorder_type",
+                description: "The disorder category an event belongs to. Categories: Political violence, Demonstrations, or Strategic developments."
+            },
+            {
+                name: "event_type",
+                description: "The type of event; further specifies the nature of the event. Examples include: Battles, Protests, Riots, Explosions/Remote violence, Violence against civilians, Strategic developments."
+            },
+            {
+                name: "sub_event_type",
+                description: "A subcategory of the event type. Examples include: Armed clash, Peaceful protest, Violent demonstration, Air/drone strike, Attack, etc."
+            },
+            {
+                name: "actor1",
+                description: "One of two main actors involved in the event (does not necessarily indicate the aggressor). Example: Rioters (Papua New Guinea)"
+            },
+            {
+                name: "assoc_actor_1",
+                description: "Actor(s) involved in the event alongside 'Actor 1' or actor designations that further identify 'Actor 1'. Can have multiple actors separated by a semicolon, or can be blank."
+            },
+            {
+                name: "inter1",
+                description: "A numeric code between 0 and 8 indicating the type of 'Actor 1'. Values: 1, 2, 3, 4, 5, 6, 7, or 8."
+            },
+            {
+                name: "actor2",
+                description: "One of two main actors involved in the event (does not necessarily indicate the target or victim). Example: Civilians (Kenya). Can be blank."
+            },
+            {
+                name: "assoc_actor_2",
+                description: "Actor(s) involved in the event alongside 'Actor 2' or actor designation further identifying 'Actor 2'. Can have multiple actors separated by a semicolon, or can be blank."
+            },
+            {
+                name: "inter2",
+                description: "A numeric code between 0 to 8 indicating the type of 'Actor 2'. Values: 0, 1, 2, 3, 4, 5, 6, 7, or 8."
+            },
+            {
+                name: "interaction",
+                description: "A two-digit numeric code (combination of 'Inter 1' and 'Inter 2') indicating the two actor types interacting in the event. Example: 13, 58"
+            },
+            {
+                name: "civilian_targeting",
+                description: "This column indicates whether the event involved civilian targeting. Values: Either 'Civilians targeted' or blank."
+            },
+            {
+                name: "iso",
+                description: "A unique three-digit numeric code assigned to each country or territory according to ISO 3166. Example: 231 for Ethiopia"
+            },
+            {
+                name: "region",
+                description: "The region of the world where the event took place. Example: Eastern Africa"
+            },
+            {
+                name: "country",
+                description: "The country or territory in which the event took place. Example: Ethiopia"
+            },
+            {
+                name: "admin1",
+                description: "The largest sub-national administrative region in which the event took place. Example: Oromia"
+            },
+            {
+                name: "admin2",
+                description: "The second largest sub-national administrative region in which the event took place. Example: Arsi. Can be blank."
+            },
+            {
+                name: "admin3",
+                description: "The third largest sub-national administrative region in which the event took place. Example: Merti. Can be blank."
+            },
+            {
+                name: "location",
+                description: "The name of the location at which the event took place. Example: Abomsa"
+            },
+            {
+                name: "latitude",
+                description: "The latitude of the location in four decimal degrees notation (EPSG:3857). Example: 8.5907"
+            },
+            {
+                name: "longitude",
+                description: "The longitude of the location in four decimal degrees notation (EPSG:3857). Example: 39.8588"
+            },
+            {
+                name: "geo_precision",
+                description: "A numeric code between 1 and 3 indicating the level of certainty of the location recorded for the event. The higher the number, the lower the precision. Values: 1, 2, or 3; with 1 being the most precise."
+            },
+            {
+                name: "source",
+                description: "The sources used to record the event. Separated by a semicolon. Example: Ansar Allah; Yemen Data Project"
+            },
+            {
+                name: "source_scale",
+                description: "An indication of the geographic closeness of the used sources to the event. Example: Local partner-National"
+            },
+            {
+                name: "notes",
+                description: "A short description of the event."
+            },
+            {
+                name: "fatalities",
+                description: "The number of reported fatalities arising from an event. When there are conflicting reports, the most conservative estimate is recorded. No information on fatalities is recorded as 0 reported fatalities."
+            },
+            {
+                name: "tags",
+                description: "Additional structured information about the event. Separated by a semicolon. Example: women targeted: politicians; sexual violence"
+            },
+            {
+                name: "timestamp",
+                description: "An automatically generated Unix timestamp that represents the exact date and time an event was uploaded to the ACLED API. Example: 1676909320"
+            },
+            { name: "time_precision_1", description: "The source material includes an actual date of an event." },
+    { name: "time_precision_2", description: "The source material indicates that an event happened sometime during the week or within a similar period of time." },
+    { name: "time_precision_3", description: "The source material only indicates that an event took place sometime during a month." },
+    
+    // Event types
+    { name: "battles", description: "A violent interaction between two organized armed groups at a particular time and location." },
+    { name: "protests", description: "An in-person public demonstration of three or more participants in which the participants do not engage in violence." },
+    { name: "riots", description: "Violent events where demonstrators or mobs of three or more engage in violent or destructive acts." },
+    { name: "explosions_remote_violence", description: "Incidents in which one side uses weapon types that, by their nature, are at range and widely destructive." },
+    { name: "violence_against_civilians", description: "Violent events where an organized armed group inflicts violence upon unarmed non-combatants." },
+    { name: "strategic_developments", description: "Contextually important information regarding incidents and activities of groups that are not recorded as Political violence or Demonstrations events." },
+    
+    // Sub-event types
+    { name: "government_regains_territory", description: "Used when government forces or their affiliates that are fighting against competing state forces or against a non-state group regain control of a location through armed interaction." },
+    { name: "non_state_actor_overtakes_territory", description: "Used when a non-state actor (excluding those operating directly on behalf of the government) or a foreign state actor, through armed interaction, captures territory from an opposing government or non-state actor." },
+    { name: "armed_clash", description: "Used when armed, organized groups engage in a battle, and no reports indicate a significant change in territorial control." },
+    { name: "excessive_force_against_protesters", description: "Used when individuals are engaged in a peaceful protest and are targeted with lethal violence or violence resulting in serious injuries." },
+    { name: "protest_with_intervention", description: "Used when individuals are engaged in a peaceful protest during which there is a physical attempt to disperse or suppress the protest without serious/lethal injuries." },
+    { name: "peaceful_protest", description: "Used when demonstrators gather for a protest and do not engage in violence or other forms of rioting activity, and are not met with any sort of force or intervention." },
+    { name: "violent_demonstration", description: "Used when demonstrators engage in violence and/or destructive activity." },
+    { name: "mob_violence", description: "Used when rioters violently interact with other rioters, civilians or their property, or armed groups outside of demonstration contexts." },
+    { name: "chemical_weapon", description: "Captures the use of chemical weapons in warfare in the absence of any other engagement." },
+    { name: "air_drone_strike", description: "Used when air or drone strikes take place in the absence of any other engagement." },
+    { name: "suicide_bomb", description: "Used when a suicide bombing occurs in the absence of an armed clash. Includes SVBIED attacks." },
+    { name: "shelling_artillery_missile_attack", description: "Captures the use of long-range artillery, missile systems, or other heavy weapons platforms in the absence of any other engagement." },
+    { name: "remote_explosive_landmine_ied", description: "Used when remotely or victim-activated devices are detonated in the absence of any other engagement." },
+    { name: "grenade", description: "Captures the use of a grenade or any other similarly hand-thrown explosive, such as an IED that is thrown, in the absence of any other engagement." },
+    { name: "sexual_violence", description: "Used when any individual is targeted with sexual violence." },
+    { name: "attack", description: "Used when civilians are targeted with violence by an organized armed actor outside the context of other forms of violence." },
+    { name: "abduction_forced_disappearance", description: "Used when an actor engages in the abduction or forced disappearance of civilians, without reports of further violence." },
+    { name: "agreement", description: "Used to record any sort of agreement between different actors." },
+    { name: "arrests", description: "Used when state forces or other actors exercising de facto control over a territory either detain a particularly significant individual or engage in politically significant mass arrests." },
+    { name: "change_to_group_activity", description: "Used to record significant changes in the activity or structure of armed groups." },
+    { name: "disrupted_weapons_use", description: "Used to capture all instances in which an event of 'Explosions/Remote violence' is prevented from occurring, or when armed actors seize significant caches of weapons." },
+    { name: "headquarters_or_base_established", description: "Used when an organized armed group establishes a permanent or semi-permanent base or headquarters." },
+    { name: "looting_property_destruction", description: "Used when actors engage in looting or seizing goods or property outside the context of other forms of violence or destruction." },
+    { name: "non_violent_transfer_of_territory", description: "Used in situations in which rebels, governments, or their affiliates acquire control of a location without engaging in a violent interaction with another group." },
+    { name: "other", description: "Used to cover any significant development that does not fall into any of the other 'Strategic developments' sub-event types." },
+    
+    // Actor Types ('Inter' codes)
+    { name: "inter1_1", description: "State Forces: collective actors, including military and police, that are recognized to perform government functions over a given territory." },
+    { name: "inter1_2", description: "Rebel Groups: political organizations with the goal of countering an established national governing regime through violence." },
+    { name: "inter1_3", description: "Political Militias: a diverse set of violent actors that are often created for a specific purpose or during a specific time period and for the furtherance of a political goal by violence." },
+    { name: "inter1_4", description: "Identity Militias: armed and violent groups organized around a collective, common feature, including community, ethnicity, region, religion, or livelihood." },
+    { name: "inter1_5", description: "Rioters: loosely assembled groups of individuals or mobs without inherent organization that engage in violence." },
+    { name: "inter1_6", description: "Protesters: peaceful demonstrators." },
+    { name: "inter1_7", description: "Civilians: in whatever number or association, are victims of violent acts within ACLED as they are unarmed and vulnerable." },
+    { name: "inter1_8", description: "External/Other Forces: includes international organizations, state forces active outside of their main country of operation, private security firms, etc." },
+    
+    { name: "inter2_0", description: "Used for one-sided events where there's no 'Actor 2'." },
+    { name: "inter2_1", description: "State Forces: collective actors, including military and police, that are recognized to perform government functions over a given territory." },
+    { name: "inter2_2", description: "Rebel Groups: political organizations with the goal of countering an established national governing regime through violence." },
+    { name: "inter2_3", description: "Political Militias: a diverse set of violent actors that are often created for a specific purpose or during a specific time period and for the furtherance of a political goal by violence." },
+    { name: "inter2_4", description: "Identity Militias: armed and violent groups organized around a collective, common feature, including community, ethnicity, region, religion, or livelihood." },
+    { name: "inter2_5", description: "Rioters: loosely assembled groups of individuals or mobs without inherent organization that engage in violence." },
+    { name: "inter2_6", description: "Protesters: peaceful demonstrators." },
+    { name: "inter2_7", description: "Civilians: in whatever number or association, are victims of violent acts within ACLED as they are unarmed and vulnerable." },
+    { name: "inter2_8", description: "External/Other Forces: includes international organizations, state forces active outside of their main country of operation, private security firms, etc." },
+    
+    // Interaction codes
+    { name: "interaction_10", description: "SOLE STATE FORCES ACTION (e.g. base establishment by state forces; remote violence involving state military with no reported casualties; non-violent military operations)" },
+    { name: "interaction_11", description: "STATE FORCES VERSUS STATE FORCES (e.g. military infighting; battles between a military and mutinous forces; arrests of military officials)" },
+    { name: "interaction_12", description: "STATE FORCES VERSUS REBELS (e.g. civil war violence between state forces and a rebel actor)" },
+    { name: "interaction_13", description: "STATE FORCES VERSUS POLITICAL MILITIA (e.g. violence between state forces and unidentified armed groups; violence between police and political party militias)" },
+    { name: "interaction_14", description: "STATE FORCES VERSUS IDENTITY MILITIA (e.g. military engagement with a communal militia)" },
+    { name: "interaction_15", description: "STATE FORCES VERSUS RIOTERS (e.g. suppression of a violent demonstration by police or military)" },
+    { name: "interaction_16", description: "STATE FORCES VERSUS PROTESTERS (e.g. suppression of a peaceful demonstration by police or military)" },
+    { name: "interaction_17", description: "STATE FORCES VERSUS CIVILIANS (e.g. state repression of civilians; arrests by police)" },
+    { name: "interaction_18", description: "STATE FORCES VERSUS EXTERNAL/OTHER FORCES (e.g. inter-state conflict; state engagement with private security forces or a UN operation)" },
+    { name: "interaction_20", description: "SOLE REBEL ACTION (e.g. base establishment; remote violence involving rebel groups with no reported target; accidental detonation by a rebel group)" },
+    { name: "interaction_22", description: "REBELS VERSUS REBELS (e.g. rebel infighting; violence between rebel groups and their splinter movements)" },
+    { name: "interaction_23", description: "REBELS VERSUS POLITICAL MILITIA (e.g. civil war violence between rebels and a pro-government militia; violence between rebels and unidentified armed groups)" },
+    { name: "interaction_24", description: "REBELS VERSUS IDENTITY MILITIA (e.g. violence between rebels and local security providers)" },
+    { name: "interaction_25", description: "REBELS VERSUS RIOTERS (e.g. spontaneous violence against a rebel group; a violent demonstration engaging a rebel group)" },
+    { name: "interaction_26", description: "REBELS VERSUS PROTESTERS (e.g. violence against protesters by rebels)" },
+    { name: "interaction_27", description: "REBELS VERSUS CIVILIANS (e.g. rebel targeting of civilians [a strategy commonly used in civil war])" },
+    { name: "interaction_28", description: "REBELS VERSUS OTHERS (e.g. civil war violence between rebels and an allied state military; rebel violence against a UN operation)" },
+    { name: "interaction_30", description: "SOLE POLITICAL MILITIA ACTION (e.g. remote violence by an unidentified armed group with no reported target; accidental detonation by a political militia; strategic developments)" },
+    { name: "interaction_33", description: "POLITICAL MILITIA VERSUS POLITICAL MILITIA (e.g. inter-elite violence)" },
+    { name: "interaction_34", description: "POLITICAL MILITIA VERSUS IDENTITY MILITIA (e.g. violence between communal militia and an unidentified armed group; violence between political militia and local security providers)" },
+    { name: "interaction_35", description: "POLITICAL MILITIA VERSUS RIOTERS (e.g. violent demonstration against a political militia; spontaneous violence against a political militia)" },
+    { name: "interaction_36", description: "POLITICAL MILITIA VERSUS PROTESTERS (e.g. suppression of a peaceful demonstration by a political militia)" },
+    { name: "interaction_37", description: "POLITICAL MILITIA VERSUS CIVILIANS (e.g. out-sourced state repression carried out by pro-government militias; civilian targeting by political militias or unidentified armed groups)" },
+    { name: "interaction_38", description: "POLITICAL MILITIA VERSUS OTHERS (e.g. violence between private security forces and unidentified armed groups; violence between pro-government militia and external state military forces)" },
+    { name: "interaction_40", description: "SOLE IDENTITY MILITIA ACTION (e.g. destruction of property by a communal militia; establishment of a local security militia)" },
+    { name: "interaction_44", description: "IDENTITY MILITIA VERSUS IDENTITY MILITIA (e.g. inter-communal violence)" },
+    { name: "interaction_45", description: "IDENTITY MILITIA VERSUS RIOTERS (e.g. violent demonstration against an identity militia; spontaneous violence against an identity militia)" },
+    { name: "interaction_46", description: "IDENTITY MILITIA VERSUS PROTESTERS (e.g. suppression of a peaceful demonstration by an identity militia)" },
+    { name: "interaction_47", description: "IDENTITY MILITIA VERSUS CIVILIANS (e.g. civilian targeting, especially in the context of inter-communal violence)" },
+    { name: "interaction_48", description: "IDENTITY MILITIA VERSUS OTHER (e.g. external state military engaging in violence against a communal militia)" },
+    { name: "interaction_50", description: "SOLE RIOTER ACTION (e.g. one-sided violent demonstration; spontaneous arson)" },
+    { name: "interaction_55", description: "RIOTERS VERSUS RIOTERS (e.g. two-sided violent demonstration in which both sides engage in violence)" },
+    { name: "interaction_56", description: "RIOTERS VERSUS PROTESTERS (e.g. two-sided demonstration in which only one side engages in violence)" },
+    { name: "interaction_57", description: "RIOTERS VERSUS CIVILIANS (e.g. violent demonstration in which civilians are injured/killed; spontaneous violence in which civilians are targeted by a mob)" },
+    { name: "interaction_58", description: "RIOTERS VERSUS OTHERS (e.g. mob violence against regional or international operation)" },
+    { name: "interaction_60", description: "SOLE PROTESTER ACTION (e.g. one-sided peaceful protest)" },
+    { name: "interaction_66", description: "PROTESTERS VERSUS PROTESTERS (e.g. two-sided peaceful protest)" },
+    { name: "interaction_67", description: "PROTESTERS VERSUS CIVILIANS (e.g. peaceful protesters engaging civilians)" },
+    { name: "interaction_68", description: "PROTESTERS VERSUS OTHER (e.g. suppression of a peaceful demonstration by private security forces)" },
+    { name: "interaction_70", description: "SOLE CIVILIAN ACTION (e.g. one-sided strategic development)" },
+    { name: "interaction_77", description: "CIVILIANS VERSUS CIVILIANS (e.g. peaceful interactions between civilians recorded as 'Strategic developments')" },
+    { name: "interaction_78", description: "OTHER ACTOR VERSUS CIVILIANS (e.g. regional or international operation targeting civilians; private security forces targeting civilians)" },
+    { name: "interaction_80", description: "SOLE OTHER ACTION (e.g. strategic developments involving international or regional operations; remote violence by external military forces with no reported target; non-violent external military operations)" },
+    { name: "interaction_88", description: "OTHER VERSUS OTHER (e.g. clashes between foreign state forces, international missions, or private security forces)" },
+    
+    // Geo-precision codes
+    { name: "geo_precision_1", description: "The source reporting indicates a particular town, and coordinates are available for that town." },
+    { name: "geo_precision_2", description: "The source material indicates that activity took place in a small part of a region, and mentions a general area, or that activity occurs near a town or a city." },
+    { name: "geo_precision_3", description: "A larger region is mentioned, using the closest natural location noted in reporting or a provincial capital if no other information is available." }
+
+        ];
+
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            
+            if (query.length === 0) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            
+            const filteredResults = codebookData.filter(item => 
+                item.name.toLowerCase().includes(query)
+            );
+            
+            if (filteredResults.length === 0) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            
+            renderResults(filteredResults, query);
+            searchResults.style.display = 'block';
+        });
+
+        function renderResults(results, query) {
+            searchResults.innerHTML = '';
+            
+            results.forEach(item => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                
+                const titleEl = document.createElement('div');
+                titleEl.className = 'result-title';
+                titleEl.innerHTML = highlightMatch(item.name, query);
+                
+                const descEl = document.createElement('div');
+                descEl.className = 'result-description';
+                descEl.textContent = item.description;
+                
+                resultItem.appendChild(titleEl);
+                resultItem.appendChild(descEl);
+                searchResults.appendChild(resultItem);
+            });
+        }
+
+        function highlightMatch(text, query) {
+            if (!query) return text;
+            
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        // Click outside to close results
+        document.addEventListener('click', function(event) {
+            if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                searchResults.style.display = 'none';
+            }
+        });
+
+        // Focus on search input when page loads
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                searchInput.focus();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
